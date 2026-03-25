@@ -71,7 +71,6 @@ func NewTree(data [][]byte) *Tree {
 			nodes[i+1].Parent = parent
 
 			newLevel = append(newLevel, parent)
-			newLevel = append(newLevel, parent)
 		}
 		nodes = newLevel
 	}
@@ -81,7 +80,7 @@ func NewTree(data [][]byte) *Tree {
 	}
 }
 
-// 根哈希转换为十六进制字符串
+// RootHash 根哈希转换为十六进制字符串
 func (t *Tree) RootHash() string {
 	if t == nil || t.Root == nil {
 		return ""
