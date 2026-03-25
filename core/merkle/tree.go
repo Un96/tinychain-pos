@@ -10,6 +10,7 @@ type Node struct {
 	Hash   []byte
 	Left   *Node
 	Right  *Node
+	Parent *Node
 	IsLeaf bool //判断是不是叶子节点
 }
 
@@ -65,6 +66,11 @@ func NewTree(data [][]byte) *Tree {
 				Right: nodes[i+1],
 				Hash:  hash(append(nodes[i].Hash, nodes[i+1].Hash...)),
 			}
+			// 子节点指向父节点
+			nodes[i].Parent = parent
+			nodes[i+1].Parent = parent
+
+			newLevel = append(newLevel, parent)
 			newLevel = append(newLevel, parent)
 		}
 		nodes = newLevel
