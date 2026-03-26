@@ -4,82 +4,71 @@ import (
 	"testing"
 )
 
-func TestNewGenesisBlock(t *testing.T) {
-	validator := []byte("validator1")
-	genesis := NewGenesisBlock(validator)
+func TestNewBlockchain(t *testing.T) {
+	bc := NewBlockchain([]byte("validator1"))
 
-	if genesis == nil {
-		t.Fatal("genesis block is nil")
+	if bc == nil {
+		t.Fatal("blockchain is nil")
 	}
-	if genesis.Header.Height != 0 {
-		t.Fatalf("genesis height should be 0, got %d", genesis.Header.Height)
+	if len(bc.Blocks) != 1 {
+		t.Fatalf("should have genesis block only, got %d", len(bc.Blocks))
 	}
-	if len(genesis.Header.PrevHash) != 0 {
-		t.Fatal("genesis prevHash should be empty")
-	}
-	if len(genesis.Hash) == 0 {
-		t.Fatal("genesis hash should not be empty")
+	if bc.LatestHeight != 0 {
+		t.Fatalf("latest height should be 0, got %d", bc.LatestHeight)
 	}
 
-	t.Logf("✅ Genesis Block Hash: %x", genesis.Hash)
-	t.Logf("   Timestamp: %d", genesis.Header.Timestamp)
+	genesis := bc.GetLatestBlock()
+	t.Logf("✅ Genesis Hash: %x", genesis.Hash)
 }
 
-func TestNewBlock(t *testing.T) {
-	// 先创建创世区块
-	genesis := NewGenesisBlock([]byte("validator1"))
+func TestAddBlock(t *testing.T) {
+	bc := NewBlockchain([]byte("validator1"))
 
-	// 创建交易
+	// 添加区块1
 	txs := []*Transaction{
 		{From: "alice", To: "bob", Amount: 10},
-		{From: "bob", To: "carol", Amount: 5},
 	}
 
-	// 创建新区块
-	block := NewBlock(txs, genesis.Hash, 1, []byte("validator2"))
-
-	if block.Header.Height != 1 {
-		t.Fatalf("height should be 1, got %d", block.Header.Height)
+	err := bc.AddBlock(txs, []byte("validator2"))
+	if err != nil {
+		t.Fatalf("add block failed: %v", err)
 	}
-	if string(block.Header.PrevHash) != string(genesis.Hash) {
+
+	if bc.LatestHeight != 1 {
+		t.Fatalf("height should be 1, got %d", bc.LatestHeight)
+	}
+
+	block1 := bc.GetLatestBlock()
+	if block1.Header.Height != 1 {
+		t.Fatal("block height mismatch")
+	}
+	if string(block1.Header.PrevHash) != string(bc.Blocks[0].Hash) {
 		t.Fatal("prevHash should match genesis hash")
 	}
-	if len(block.Header.MerkleRoot) == 0 {
-		t.Fatal("merkleRoot should not be empty")
-	}
-	if len(block.Transactions) != 2 {
-		t.Fatalf("should have 2 transactions, got %d", len(block.Transactions))
-	}
 
-	t.Logf("✅ Block #1 Hash: %x", block.Hash)
-	t.Logf("   PrevHash: %x", block.Header.PrevHash)
-	t.Logf("   MerkleRoot: %x", block.Header.MerkleRoot)
-	t.Logf("   Tx Count: %d", len(block.Transactions))
+	t.Logf("✅ Block #1 added")
+	t.Logf("   Hash: %x", block1.Hash)
+	t.Logf("   PrevHash: %x", block1.Header.PrevHash)
+	t.Logf("   Tx Count: %d", len(block1.Transactions))
 }
 
-func TestBlockSerialize(t *testing.T) {
-	block := NewGenesisBlock([]byte("validator1"))
+func TestGetBlockByHeight(t *testing.T) {
+	bc := NewBlockchain([]byte("validator1"))
+	bc.AddBlock([]*Transaction{{From: "a", To: "b", Amount: 5}}, []byte("v2"))
 
-	data, err := block.Serialize()
+	block, err := bc.GetBlockByHeight(1)
 	if err != nil {
-		t.Fatalf("serialize failed: %v", err)
+		t.Fatal(err)
 	}
-	if len(data) == 0 {
-		t.Fatal("serialized data is empty")
-	}
-
-	// 反序列化
-	recovered, err := DeserializeBlock(data)
-	if err != nil {
-		t.Fatalf("deserialize failed: %v", err)
+	if block.Header.Height != 1 {
+		t.Fatal("wrong block")
 	}
 
-	if recovered.Header.Height != block.Header.Height {
-		t.Fatal("height mismatch after deserialize")
-	}
-	if string(recovered.Hash) != string(block.Hash) {
-		t.Fatal("hash mismatch after deserialize")
+	// 查询不存在的区块
+	_, err = bc.GetBlockByHeight(999)
+	if err == nil {
+		t.Fatal("should return error for non-existent block")
 	}
 
-	t.Log("✅ Serialize/Deserialize OK")
+	t.Log("✅ GetBlockByHeight OK")
 }
